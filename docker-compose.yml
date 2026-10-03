@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7-jammy
+    container_name: hostel_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - hostel_net
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: hostel_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongodb:27017/hostelpro
+      - JWT_SECRET=supersecretjwtkey123!_change_in_production
+      - CLIENT_URL=http://localhost:3000,http://localhost:5173
+      - ADMIN_EMAIL=admin@hostelpro.com
+      - ADMIN_PASSWORD=adminpassword123
+    depends_on:
+      - mongodb
+    networks:
+      - hostel_net
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:5000/api
+    container_name: hostel_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - hostel_net
+
+volumes:
+  mongo_data:
+
+networks:
+  hostel_net:
+    driver: bridge
